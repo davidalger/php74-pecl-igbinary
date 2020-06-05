@@ -1,3 +1,5 @@
+# IUS spec file for php74-pecl-igbinary, forked from:
+#
 # Fedora spec file for php-pecl-igbinary
 #
 # Copyright (c) 2010-2019 Remi Collet
@@ -13,24 +15,26 @@
 %global pecl_name  igbinary
 %global with_zts   0%{?__ztsphp:1}
 %global ini_name   40-%{pecl_name}.ini
+%global php        php74
 
 %global upstream_version 3.0.1
 #global upstream_prever  RC1
 
 Summary:        Replacement for the standard PHP serializer
-Name:           php-pecl-igbinary
+Name:           %{php}-pecl-%{pecl_name}
 Version:        %{upstream_version}%{?upstream_prever:~%{upstream_prever}}
 Release:        3%{?dist}
-Source0:        http://pecl.php.net/get/%{pecl_name}-%{upstream_version}%{?upstream_prever}.tgz
+Source0:        https://pecl.php.net/get/%{pecl_name}-%{upstream_version}%{?upstream_prever}.tgz
 License:        BSD
 
-URL:            http://pecl.php.net/package/igbinary
+URL:            https://pecl.php.net/package/igbinary
 
 BuildRequires:  gcc
-BuildRequires:  php-pear
-BuildRequires:  php-devel >= 7
-BuildRequires:  php-pecl-apcu-devel
-BuildRequires:  php-json
+# build require pear1's dependencies to avoid mismatched php stacks
+BuildRequires:  pear1 %{php}-cli %{php}-common %{php}-xml
+BuildRequires:  %{php}-devel
+BuildRequires:  %{php}-pecl-apcu-devel
+BuildRequires:  %{php}-json
 
 Requires:       php(zend-abi) = %{php_zend_api}
 Requires:       php(api) = %{php_core_api}
@@ -39,6 +43,11 @@ Provides:       php-%{pecl_name} = %{version}
 Provides:       php-%{pecl_name}%{?_isa} = %{version}
 Provides:       php-pecl(%{pecl_name}) = %{version}
 Provides:       php-pecl(%{pecl_name})%{?_isa} = %{version}
+
+# safe replacement
+Provides:       php-pecl-%{pecl_name} = %{version}-%{release}
+Provides:       php-pecl-%{pecl_name}%{?_isa} = %{version}-%{release}
+Conflicts:      php-pecl-%{pecl_name} < %{version}-%{release}
 
 
 %description
@@ -52,8 +61,14 @@ based storages for serialized data.
 
 %package devel
 Summary:       Igbinary developer files (header)
-Requires:      php-pecl-%{pecl_name}%{?_isa} = %{version}-%{release}
-Requires:      php-devel%{?_isa}
+Requires:      %{name}%{?_isa} = %{version}-%{release}
+Requires:      %{php}-devel%{?_isa}
+
+# safe replacement
+Provides:      php-pecl-%{pecl_name}-devel = %{version}-%{release}
+Provides:      php-pecl-%{pecl_name}-devel%{?_isa} = %{version}-%{release}
+Conflicts:     php-pecl-%{pecl_name}-devel < %{version}-%{release}
+
 
 %description devel
 These are the files needed to compile programs using Igbinary
@@ -100,20 +115,20 @@ EOF
 cd NTS
 %{_bindir}/phpize
 %configure --with-php-config=%{_bindir}/php-config
-make %{?_smp_mflags}
+%make_build
 
 %if %{with_zts}
 cd ../ZTS
 %{_bindir}/zts-phpize
 %configure --with-php-config=%{_bindir}/zts-php-config
-make %{?_smp_mflags}
+%make_build
 %endif
 
 
 %install
 make install -C NTS INSTALL_ROOT=%{buildroot}
 
-install -D -m 644 package.xml %{buildroot}%{pecl_xmldir}/%{name}.xml
+install -D -m 644 package.xml %{buildroot}%{pecl_xmldir}/%{pecl_name}.xml
 
 install -D -m 644 %{ini_name} %{buildroot}%{php_inidir}/%{ini_name}
 
@@ -176,11 +191,29 @@ REPORT_EXIT_STATUS=1 \
 %endif
 
 
+%triggerin -- pear1
+if [ -x %{__pecl} ]; then
+    %{pecl_install} %{pecl_xmldir}/%{pecl_name}.xml >/dev/null || :
+fi
+
+
+%posttrans
+if [ -x %{__pecl} ]; then
+    %{pecl_install} %{pecl_xmldir}/%{pecl_name}.xml >/dev/null || :
+fi
+
+
+%postun
+if [ $1 -eq 0 -a -x %{__pecl} ]; then
+    %{pecl_uninstall} %{pecl_name} >/dev/null || :
+fi
+
+
 %files
 %doc %{pecl_docdir}/%{pecl_name}
 %config(noreplace) %{php_inidir}/%{ini_name}
 %{php_extdir}/%{pecl_name}.so
-%{pecl_xmldir}/%{name}.xml
+%{pecl_xmldir}/%{pecl_name}.xml
 
 %if %{with_zts}
 %config(noreplace) %{php_ztsinidir}/%{ini_name}
@@ -198,6 +231,9 @@ REPORT_EXIT_STATUS=1 \
 
 
 %changelog
+* Fri Jun 05 2020 David Alger <davidmalger@gmail.com> - 3.0.1-3
+- Port from Fedora to IUS
+
 * Thu Oct 03 2019 Remi Collet <remi@remirepo.net> - 3.0.1-3
 - rebuild for https://fedoraproject.org/wiki/Changes/php74
 
