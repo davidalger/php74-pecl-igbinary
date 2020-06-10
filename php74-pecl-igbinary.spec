@@ -17,14 +17,13 @@
 %global ini_name   40-%{pecl_name}.ini
 %global php        php74
 
-%global upstream_version 3.0.1
-#global upstream_prever  RC1
-
 Summary:        Replacement for the standard PHP serializer
 Name:           %{php}-pecl-%{pecl_name}
-Version:        %{upstream_version}%{?upstream_prever:~%{upstream_prever}}
-Release:        3%{?dist}
-Source0:        https://pecl.php.net/get/%{pecl_name}-%{upstream_version}%{?upstream_prever}.tgz
+Version:        3.1.2
+Release:        1%{?dist}
+Source0:        https://pecl.php.net/get/%{pecl_name}-%{version}.tgz
+# https://github.com/igbinary/igbinary/pull/275
+Patch0:         0001-Update-tests-of-serializing-ArrayObject-for-7.4.6.patch
 License:        BSD
 
 URL:            https://pecl.php.net/package/igbinary
@@ -76,17 +75,19 @@ These are the files needed to compile programs using Igbinary
 
 %prep
 %setup -q -c
-mv %{pecl_name}-%{upstream_version}%{?upstream_prever} NTS
+mv %{pecl_name}-%{version} NTS
 
 sed -e '/COPYING/s/role="doc"/role="src"/' -i package.xml
 
 cd NTS
 
+%patch0 -p 1
+
 # Check version
 subdir="php$(%{__php} -r 'echo PHP_MAJOR_VERSION;')"
 extver=$(sed -n '/#define PHP_IGBINARY_VERSION/{s/.* "//;s/".*$//;p}' src/$subdir/igbinary.h)
-if test "x${extver}" != "x%{upstream_version}%{?upstream_prever}"; then
-   : Error: Upstream version is ${extver}, expecting %{upstream_version}%{?upstream_prever}.
+if test "x${extver}" != "x%{version}"; then
+   : Error: Upstream version is ${extver}, expecting %{version}.
    exit 1
 fi
 cd ..
@@ -231,6 +232,10 @@ fi
 
 
 %changelog
+* Wed Jun 10 2020 Carl George <carl@george.computer> - 3.1.2-1
+- Latest upstream
+- Add patch0 to fix failing test
+
 * Fri Jun 05 2020 David Alger <davidmalger@gmail.com> - 3.0.1-3
 - Port from Fedora to IUS
 
